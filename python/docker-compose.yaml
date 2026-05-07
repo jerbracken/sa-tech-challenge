@@ -6,6 +6,9 @@ services:
     image: backend-for-frontend-python:latest
     ports:
       - "10115"
+    environment:
+      HONEYCOMB_API_KEY: ${HONEYCOMB_API_KEY}
+      OTEL_SERVICE_NAME: backend-for-frontend
 
   image-picker:
     build:
@@ -16,6 +19,8 @@ services:
       - "10116"
     environment:
       BUCKET_NAME: random-pictures
+      HONEYCOMB_API_KEY: ${HONEYCOMB_API_KEY}
+      OTEL_SERVICE_NAME: image-picker
 
   meminator:
     build:
@@ -24,6 +29,9 @@ services:
     image: meminator-python:latest
     ports:
       - "10117"
+    environment:
+      HONEYCOMB_API_KEY: ${HONEYCOMB_API_KEY}
+      OTEL_SERVICE_NAME: meminator
 
   phrase-picker:
     build:
@@ -32,14 +40,15 @@ services:
     image: phrase-picker-python:latest
     ports:
       - "10118"
+    environment:
+      HONEYCOMB_API_KEY: ${HONEYCOMB_API_KEY}
+      OTEL_SERVICE_NAME: phrase-picker
 
   web:
     build:
       context: ${SERVICE_PATH:-services}/web
       dockerfile: Dockerfile
     image: web:latest
-    # volumes: # uncomment this for faster development on the frontend
-    #   - ./services/web/dist:/usr/share/nginx/html # Mount directory containing static files -- only do this for development
     ports:
       - "10114:10114"
     depends_on:

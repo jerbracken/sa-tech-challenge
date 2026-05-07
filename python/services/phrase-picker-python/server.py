@@ -1,7 +1,34 @@
-from flask import Flask, jsonify
+import os
 import random
+from flask import Flask, jsonify
+
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
+
+
+def configure_opentelemetry():
+    resource = Resource.create({
+        "service.name": os.environ.get("OTEL_SERVICE_NAME", "phrase-picker"),
+    })
+    provider = TracerProvider(resource=resource)
+    exporter = OTLPSpanExporter(
+        endpoint="https://api.honeycomb.io/v1/traces",
+        headers={"x-honeycomb-team": os.environ.get("HONEYCOMB_API_KEY", "")},
+    )
+    provider.add_span_processor(BatchSpanProcessor(exporter))
+    trace.set_tracer_provider(provider)
+
+
+configure_opentelemetry()
 
 app = Flask(__name__)
+FlaskInstrumentor().instrument_app(app)
+
+tracer = trace.get_tracer(__name__)
 
 PHRASES = [
     "you're muted",
@@ -22,25 +49,29 @@ PHRASES = [
     "deploy != release",
     "oh, just the crimes",
     "not a bug, it's a feature",
-    "test in prod", 
+    "test in prod",
     "who broke the build?",
 ]
 
-# Route for health check
+
 @app.route('/health')
 def health():
     return jsonify({"message": "I am here, ready to pick a phrase", "status_code": 0})
 
-# Route for getting a random phrase
+
 @app.route('/phrase')
 def get_phrase():
     phrase = choose(PHRASES)
-    # You can implement tracing logic here if needed
     return jsonify({"phrase": phrase})
 
-# Helper function to choose a random item from a list
+
 def choose(array):
-    return random.choice(array)
+    with tracer.start_as_current_span("choose") as span:
+        result = random.choice(array)
+        span.set_attribute("app.chosen_phrase", result)
+        span.set_attribute("app.phrase_count", len(array))
+        return result
+
 
 if __name__ == '__main__':
     app.run(port=10118)
