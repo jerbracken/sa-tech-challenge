@@ -1,8 +1,17 @@
-// Function to fetch the image binary data from the server
+// Persist user_id across sessions, reset session_id each tab/page load
+const userId = localStorage.getItem('user_id') || (() => {
+    const id = crypto.randomUUID();
+    localStorage.setItem('user_id', id);
+    return id;
+})();
+const sessionId = sessionStorage.getItem('session_id') || (() => {
+    const id = crypto.randomUUID();
+    sessionStorage.setItem('session_id', id);
+    return id;
+})();
 
 async function fetchPicture() {
     try {
-        // Start with the loading image
         document.getElementById('picture').style = "display:none";
         document.getElementById('loading-meme').style = "display:block";
         document.getElementById('message').innerText = "Generating meme...";
@@ -11,23 +20,19 @@ async function fetchPicture() {
         const response = await fetch('/backend/createPicture', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-User-ID': userId,
+                'X-Session-ID': sessionId,
             },
-            // Optionally, you can send data in the request body if needed
-            // body: JSON.stringify({ /* any data you want to send */ })
         });
 
         if (!response.ok) {
             throw new Error('Failed to fetch picture');
         }
 
-        // Convert the binary response to a blob
         const blob = await response.blob();
-
-        // Create a URL for the blob
         const imgUrl = URL.createObjectURL(blob);
 
-        // Set the image source to the URL
         document.getElementById('loading-meme').style = "display:none";
         document.getElementById('message').style = "display:none";
         document.getElementById('picture').src = imgUrl;

@@ -50,22 +50,24 @@ def meminate():
 
     current_span = trace.get_current_span()
     current_span.set_attribute("app.phrase", phrase)
-    current_span.set_attribute("app.imageUrl", imageUrl)
+    current_span.set_attribute("app.image_selected", imageUrl)
+    current_span.set_attribute("app.phrase_char_count", len(phrase))
+    current_span.set_attribute("app.phrase_word_count", len(phrase.split()))
 
     with tracer.start_as_current_span("download_image") as span:
-        span.set_attribute("app.imageUrl", imageUrl)
+        span.set_attribute("app.image_selected", imageUrl)
         input_image_path = download_image(imageUrl)
         span.set_attribute("app.input_image_path", input_image_path)
         if os.path.exists(input_image_path):
             span.set_attribute("app.input_image_size_bytes", os.path.getsize(input_image_path))
+        else:
+            span.set_attribute("app.error_category", "IMAGE_DOWNLOAD_FAILED")
+            current_span.set_attribute("app.error_category", "IMAGE_DOWNLOAD_FAILED")
 
     if not os.path.exists(input_image_path):
         return 'downloaded image file not found', 500
 
     output_image_path = generate_random_filename(input_image_path)
-
-    current_span.set_attribute("app.phrase_char_count", len(phrase))
-    current_span.set_attribute("app.phrase_word_count", len(phrase.split()))
 
     command = [
         'convert',
@@ -90,6 +92,8 @@ def meminate():
         span.set_attribute("app.exit_code", result.returncode)
         if result.returncode != 0:
             span.set_attribute("app.stderr", result.stderr)
+            span.set_attribute("app.error_category", "IMAGEMAGICK_ERROR")
+            current_span.set_attribute("app.error_category", "IMAGEMAGICK_ERROR")
             raise Exception("Subprocess failed with return code:", result.returncode)
         if os.path.exists(output_image_path):
             span.set_attribute("app.output_image_size_bytes", os.path.getsize(output_image_path))
