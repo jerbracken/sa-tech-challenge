@@ -70,6 +70,8 @@ def choose(array):
         result = random.choice(array)
         span.set_attribute("app.chosen_phrase", result)
         span.set_attribute("app.phrase_count", len(array))
+        span.set_attribute("app.phrase_length", len(result))
+        span.set_attribute("app.phrase_word_count", len(result.split()))
         return result
 
 

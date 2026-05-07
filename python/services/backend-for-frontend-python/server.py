@@ -45,17 +45,24 @@ def create_picture():
         phrase_response = fetch_from_service('phrase-picker')
         image_response = fetch_from_service('image-picker')
 
-        phrase_result = phrase_response.json() if phrase_response and phrase_response.ok else {"phrase": "This is sparta"}
-        image_result = image_response.json() if phrase_response and image_response.ok else {"imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Banana-Single.jpg/1360px-Banana-Single.jpg"}
+        used_phrase_fallback = not (phrase_response and phrase_response.ok)
+        used_image_fallback = not (phrase_response and image_response.ok)
+
+        phrase_result = phrase_response.json() if not used_phrase_fallback else {"phrase": "This is sparta"}
+        image_result = image_response.json() if not used_image_fallback else {"imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Banana-Single.jpg/1360px-Banana-Single.jpg"}
 
         span.set_attribute("app.phrase", phrase_result.get("phrase", ""))
         span.set_attribute("app.imageUrl", image_result.get("imageUrl", ""))
+        span.set_attribute("app.used_phrase_fallback", used_phrase_fallback)
+        span.set_attribute("app.used_image_fallback", used_image_fallback)
 
         body = {**phrase_result, **image_result}
         meminator_response = fetch_from_service('meminator', method="POST", body=body)
 
         if not meminator_response.ok or meminator_response.content is None:
             raise Exception(f"Failed to fetch picture from meminator: {meminator_response.status_code} {meminator_response.reason}")
+
+        span.set_attribute("app.response_size_bytes", len(meminator_response.content))
 
         flask_response = Response(
             meminator_response.content,

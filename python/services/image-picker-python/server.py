@@ -67,6 +67,8 @@ def choose(array):
         result = random.choice(array)
         span.set_attribute("app.chosen_image_url", result)
         span.set_attribute("app.image_count", len(array))
+        span.set_attribute("app.image_extension", os.path.splitext(result)[-1].lstrip(".") or "unknown")
+        span.set_attribute("app.bucket_name", os.environ.get("BUCKET_NAME", "random-pictures"))
         return result
 
 

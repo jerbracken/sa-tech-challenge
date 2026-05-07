@@ -1,5 +1,6 @@
 import os
 import subprocess
+import time
 from flask import Flask, jsonify, send_file, request
 
 from opentelemetry import trace
@@ -55,11 +56,16 @@ def meminate():
         span.set_attribute("app.imageUrl", imageUrl)
         input_image_path = download_image(imageUrl)
         span.set_attribute("app.input_image_path", input_image_path)
+        if os.path.exists(input_image_path):
+            span.set_attribute("app.input_image_size_bytes", os.path.getsize(input_image_path))
 
     if not os.path.exists(input_image_path):
         return 'downloaded image file not found', 500
 
     output_image_path = generate_random_filename(input_image_path)
+
+    current_span.set_attribute("app.phrase_char_count", len(phrase))
+    current_span.set_attribute("app.phrase_word_count", len(phrase.split()))
 
     command = [
         'convert',
@@ -78,11 +84,15 @@ def meminate():
         span.set_attribute("app.phrase", phrase)
         span.set_attribute("app.max_width_px", IMAGE_MAX_WIDTH_PX)
         span.set_attribute("app.max_height_px", IMAGE_MAX_HEIGHT_PX)
+        t0 = time.time()
         result = subprocess.run(command, capture_output=True, text=True)
+        span.set_attribute("app.imagick_duration_ms", round((time.time() - t0) * 1000))
         span.set_attribute("app.exit_code", result.returncode)
         if result.returncode != 0:
             span.set_attribute("app.stderr", result.stderr)
             raise Exception("Subprocess failed with return code:", result.returncode)
+        if os.path.exists(output_image_path):
+            span.set_attribute("app.output_image_size_bytes", os.path.getsize(output_image_path))
 
     return send_file(output_image_path, mimetype='image/png')
 
