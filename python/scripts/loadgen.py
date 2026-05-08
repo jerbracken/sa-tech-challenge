@@ -17,7 +17,7 @@ from datetime import datetime
 
 
 BASE_URL = "http://localhost:10114"
-HEALTH_URL = f"{BASE_URL}/health"
+HEALTH_URL = f"{BASE_URL}/backend/health"
 CREATE_URL = f"{BASE_URL}/backend/createPicture"
 
 
@@ -64,7 +64,7 @@ def send_request(session):
 
 def run(min_delay, max_delay, base_url):
     global HEALTH_URL, CREATE_URL
-    HEALTH_URL = f"{base_url}/health"
+    HEALTH_URL = f"{base_url}/backend/health"
     CREATE_URL = f"{base_url}/backend/createPicture"
 
     if not wait_for_app():
